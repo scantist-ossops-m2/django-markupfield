@@ -1,15 +1,15 @@
-from django.utils.html import linebreaks, urlize
+from django.utils.html import escape, linebreaks, urlize
 from django.utils.functional import curry
 from django.conf import settings
 
 # build DEFAULT_MARKUP_TYPES
 DEFAULT_MARKUP_TYPES = [
     ('html', lambda markup: markup),
-    ('plain', lambda markup: urlize(linebreaks(markup))),
+    ('plain', lambda markup: linebreaks(urlize(escape(markup)))),
 ]
 
 try:
-    import pygments
+    import pygments     # noqa
     PYGMENTS_INSTALLED = True
 
     def _register_pygments_rst_directive():
@@ -25,7 +25,8 @@ try:
         }
 
         def pygments_directive(name, arguments, options, content, lineno,
-                               content_offset, block_text, state, state_machine):
+                               content_offset, block_text, state,
+                               state_machine):
             try:
                 lexer = get_lexer_by_name(arguments[0])
             except ValueError:
@@ -49,8 +50,9 @@ try:
     # try and replace if pygments & codehilite are available
     if PYGMENTS_INSTALLED:
         try:
-            from markdown.extensions.codehilite import makeExtension
-            md_filter = curry(markdown.markdown, extensions=['codehilite(css_class=highlight)'])
+            from markdown.extensions.codehilite import makeExtension   # noqa
+            md_filter = curry(markdown.markdown,
+                              extensions=['codehilite(css_class=highlight)'])
         except ImportError:
             pass
 
@@ -68,10 +70,6 @@ try:
 
     def render_rest(markup):
         overrides = getattr(settings, "RESTRUCTUREDTEXT_FILTER_SETTINGS", {})
-        overrides.update({
-            'raw_enabled': False,
-            'file_insertion_enabled': False,
-        })
         parts = publish_parts(source=markup, writer_name="html4css1",
                               settings_overrides=overrides)
         return parts["fragment"]
@@ -82,8 +80,7 @@ except ImportError:
 
 try:
     import textile
-    textile_filter =curry(textile.textile, encoding='utf-8', output='utf-8')
+    textile_filter = curry(textile.textile, encoding='utf-8', output='utf-8')
     DEFAULT_MARKUP_TYPES.append(('textile', textile_filter))
 except ImportError:
     pass
-
